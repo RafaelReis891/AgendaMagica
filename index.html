@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="description" content="Agenda Mágica — sua secretária pessoal offline-first" />
+  <title>Mágica</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="app-header">
+    <div class="header-top">
+      <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
+      <h1 class="brand">✨ Mágica</h1>
+      <div id="sync-indicator" class="sync-dot" title="Status de sincronização">
+        <span class="dot"></span>
+        <span class="label">Online</span>
+      </div>
+    </div>
+
+    <!-- Barra de navegação de data (Hoje) -->
+    <nav id="date-nav" class="date-nav">
+      <button id="btn-prev-day" class="icon-btn" aria-label="Dia anterior">←</button>
+      <button id="btn-today" class="today-btn">HOJE</button>
+      <button id="btn-next-day" class="icon-btn" aria-label="Próximo dia">→</button>
+    </nav>
+
+    <!-- Data principal -->
+    <div id="date-display" class="date-display">
+      <div class="weekday">SEXTA-FEIRA</div>
+      <div class="full-date">28 de Agosto de 2026</div>
+    </div>
+
+    <!-- Barra de pesquisa -->
+    <div class="search-wrap">
+      <input type="search" id="search-input" placeholder="🔎 O que você está procurando?" />
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main id="app-main">
+
+    <!-- Seção AGORA / PRÓXIMO / PENDÊNCIAS -->
+    <section id="highlights" class="highlights">
+      <div class="highlight-card" id="now-card">
+        <div class="hl-label">AGORA</div>
+        <div class="hl-content" id="now-content">—</div>
+      </div>
+      <div class="highlight-card" id="next-card">
+        <div class="hl-label">PRÓXIMO</div>
+        <div class="hl-content" id="next-content">—</div>
+      </div>
+      <div class="highlight-card pending-card" id="pending-card" hidden>
+        <div class="hl-label">⚠ PENDÊNCIAS</div>
+        <div class="hl-content" id="pending-content"></div>
+      </div>
+    </section>
+
+    <!-- Resumo do dia -->
+    <section id="day-summary" class="day-summary">
+      <div class="summary-item"><span class="num" id="sum-total">0</span><span class="lbl">atividades</span></div>
+      <div class="summary-item done"><span class="num" id="sum-done">0</span><span class="lbl">✓ concluídas</span></div>
+      <div class="summary-item pending"><span class="num" id="sum-pending">0</span><span class="lbl">⚠ pendentes</span></div>
+      <div class="summary-item notes"><span class="num" id="sum-notes">0</span><span class="lbl">📝 notas</span></div>
+    </section>
+
+    <!-- Filtros rápidos -->
+    <section id="filters" class="filters">
+      <select id="filter-type" aria-label="Filtrar por tipo">
+        <option value="all">Todos os tipos</option>
+        <option value="note">📝 Notas</option>
+        <option value="task">✅ Tarefas</option>
+        <option value="reminder">🔔 Lembretes</option>
+        <option value="checklist">☑️ Checklists</option>
+        <option value="event">📌 Eventos</option>
+      </select>
+      <select id="filter-status" aria-label="Filtrar por status">
+        <option value="all">Todos</option>
+        <option value="pending">Pendentes</option>
+        <option value="done">Concluídos</option>
+        <option value="late">Atrasados</option>
+      </select>
+      <select id="filter-priority" aria-label="Filtrar por prioridade">
+        <option value="all">Prioridade</option>
+        <option value="low">Baixa</option>
+        <option value="normal">Normal</option>
+        <option value="high">Alta</option>
+      </select>
+    </section>
+
+    <!-- Linha do tempo -->
+    <section id="timeline" class="timeline" aria-live="polite"></section>
+
+    <!-- Resultados de pesquisa -->
+    <section id="search-results" class="search-results" hidden></section>
+
+    <!-- Calendário -->
+    <section id="calendar-view" class="calendar-view" hidden></section>
+
+    <!-- Histórico -->
+    <section id="history-view" class="history-view" hidden></section>
+
+  </main>
+
+  <!-- FAB -->
+  <button id="fab-add" class="fab" aria-label="Adicionar registro">+</button>
+
+  <!-- MODAL: tipo de registro -->
+  <dialog id="modal-type" class="modal">
+    <form method="dialog">
+      <h2>O que você deseja adicionar?</h2>
+      <div class="type-grid">
+        <button type="button" data-type="note" class="type-btn">📝<span>Nota</span></button>
+        <button type="button" data-type="task" class="type-btn">✅<span>Tarefa</span></button>
+        <button type="button" data-type="reminder" class="type-btn">🔔<span>Lembrete</span></button>
+        <button type="button" data-type="checklist" class="type-btn">☑️<span>Checklist</span></button>
+        <button type="button" data-type="event" class="type-btn">📌<span>Evento</span></button>
+      </div>
+      <div class="quick-row">
+        <button type="button" id="btn-quick-note" class="quick-btn">+ Nota rápida</button>
+      </div>
+      <button type="button" class="close-btn" data-close>Fechar</button>
+    </form>
+  </dialog>
+
+  <!-- MODAL: formulário de registro -->
+  <dialog id="modal-form" class="modal">
+    <form id="record-form" method="dialog">
+      <h2 id="form-title">Novo registro</h2>
+
+      <label>Título
+        <input type="text" name="title" required maxlength="200" />
+      </label>
+
+      <label>Descrição
+        <textarea name="description" rows="3"></textarea>
+      </label>
+
+      <div class="row">
+        <label>Data
+          <input type="date" name="date" required />
+        </label>
+        <label>Horário
+          <input type="time" name="time" />
+        </label>
+      </div>
+
+      <label>Horário final (opcional)
+        <input type="time" name="endTime" />
+      </label>
+
+      <div class="row">
+        <label>Categoria
+          <input type="text" name="category" list="categories-list" placeholder="ex: trabalho" />
+        </label>
+        <label>Prioridade
+          <select name="priority">
+            <option value="low">Baixa</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">Alta</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Tags (separadas por vírgula)
+        <input type="text" name="tags" placeholder="ex: urgente, cliente" />
+      </label>
+
+      <datalist id="categories-list">
+        <option value="Trabalho"></option>
+        <option value="Pessoal"></option>
+        <option value="Casa"></option>
+        <option value="Carro"></option>
+        <option value="Financeiro"></option>
+        <option value="Projetos"></option>
+      </datalist>
+
+      <!-- Checklist (visível só quando tipo = checklist) -->
+      <div id="checklist-wrap" hidden>
+        <label>Itens do checklist
+          <textarea name="checklist" rows="4" placeholder="Um item por linha"></textarea>
+        </label>
+      </div>
+
+      <!-- Alerta -->
+      <fieldset class="alert-fieldset">
+        <legend>
+          <label class="inline">
+            <input type="checkbox" name="alert" /> Ativar alerta 🔔
+          </label>
+        </legend>
+        <div id="alert-options" hidden>
+          <label>Alertar
+            <select name="alertMinutesBefore">
+              <option value="0">no horário</option>
+              <option value="5">5 minutos antes</option>
+              <option value="10" selected>10 minutos antes</option>
+              <option value="15">15 minutos antes</option>
+              <option value="30">30 minutos antes</option>
+              <option value="60">1 hora antes</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" data-close>Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL: ações rápidas (long press / menu do registro) -->
+  <dialog id="modal-actions" class="modal">
+    <form method="dialog">
+      <h2 id="actions-title">Ações</h2>
+      <div class="actions-grid">
+        <button type="button" data-action="edit">✏️ Editar</button>
+        <button type="button" data-action="toggle">✓ Concluir</button>
+        <button type="button" data-action="postpone">⏰ Adiar</button>
+        <button type="button" data-action="duplicate">📋 Duplicar</button>
+        <button type="button" data-action="share">🔗 Compartilhar</button>
+        <button type="button" data-action="alert">🔔 Alerta</button>
+        <button type="button" data-action="delete" class="danger">🗑️ Excluir</button>
+      </div>
+      <button type="button" class="close-btn" data-close>Fechar</button>
+    </form>
+  </dialog>
+
+  <!-- MODAL: adiar -->
+  <dialog id="modal-postpone" class="modal">
+    <form method="dialog">
+      <h2>Adiar para...</h2>
+      <div class="postpone-grid">
+        <button type="button" data-minutes="10">10 minutos</button>
+        <button type="button" data-minutes="30">30 minutos</button>
+        <button type="button" data-minutes="60">1 hora</button>
+        <button type="button" data-when="tomorrow">Amanhã</button>
+        <label>Escolher horário
+          <input type="datetime-local" id="postpone-custom" />
+        </label>
+      </div>
+      <button type="button" class="close-btn" data-close>Cancelar</button>
+    </form>
+  </dialog>
+
+  <!-- MODAL: notificação de alerta -->
+  <dialog id="modal-alert" class="modal alert-modal">
+    <div class="alert-content">
+      <div class="alert-icon">🔔</div>
+      <h2 id="alert-title">Hora do compromisso</h2>
+      <p id="alert-body"></p>
+      <div class="alert-actions">
+        <button type="button" id="alert-done" class="btn-primary">Concluído</button>
+        <button type="button" id="alert-postpone" class="btn-secondary">Adiar</button>
+        <button type="button" id="alert-open" class="btn-secondary">Abrir</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MENU LATERAL -->
+  <aside id="side-menu" class="side-menu" hidden>
+    <div class="side-header">
+      <h2>✨ Mágica</h2>
+      <button id="btn-close-menu" class="icon-btn" aria-label="Fechar menu">×</button>
+    </div>
+    <nav class="side-nav">
+      <button data-view="today">📅 Hoje</button>
+      <button data-view="calendar">🗓️ Calendário</button>
+      <button data-view="history">🕘 Histórico</button>
+      <button data-view="search">🔎 Pesquisar</button>
+      <button data-view="settings">⚙️ Configurações</button>
+    </nav>
+    <div class="side-footer">
+      <label class="inline">
+        <input type="checkbox" id="theme-toggle" /> Modo escuro 🌙
+      </label>
+      <div id="user-info" class="user-info"></div>
+      <button id="btn-login" class="btn-primary">Entrar / Cadastrar</button>
+      <button id="btn-logout" class="btn-secondary" hidden>Sair</button>
+    </div>
+  </aside>
+
+  <!-- MODAL: login -->
+  <dialog id="modal-login" class="modal">
+    <form id="login-form" method="dialog">
+      <h2>Entrar na Mágica</h2>
+      <p class="muted">Sincronize seus dados entre dispositivos.</p>
+      <label>E-mail
+        <input type="email" name="email" required />
+      </label>
+      <label>Senha
+        <input type="password" name="password" required minlength="6" />
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" data-close>Cancelar</button>
+        <button type="submit" name="mode" value="login" class="btn-primary">Entrar</button>
+        <button type="submit" name="mode" value="register" class="btn-secondary">Cadastrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
